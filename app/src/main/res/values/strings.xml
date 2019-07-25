@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_name">ContactApp</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="hint_organization">Organization</string>
+    <string name="validation_last_name">Please enter name</string>
+    <string name="menu_title_add">Add</string>
+    <string name="menu_title_save">save</string>
+    <string name="hint_title">Title</string>
+    <string name="hint_last_name">Last Name*</string>
+    <string name="hint_first_name">First Name</string>
+    <string name="hint_email">Email</string>
+    <string name="hint_address_house_number">Address / House number</string>
+    <string name="hint_notes">Notes</string>
+    <string name="hint_zip">Zip</string>
+    <string name="hint_city">City</string>
+    <string name="hint_country">Country</string>
+    <string name="validation_email">Please enter valid email</string>
+    <string name="you_don_t_have_contact">You Don\'t Have contact!</string>
+    <string name="insert_successfully">Insert successfully</string>
+</resources>
