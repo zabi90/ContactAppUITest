@@ -14,7 +14,7 @@ class MainActivity : AppCompatActivity(), ContactListFragment.OnFragmentInteract
 
         val contactDetailFragment = ContactDetailFragment.newInstance(contact) as ContactDetailFragment
         supportFragmentManager.beginTransaction()
-            .replace(R.id.container, contactDetailFragment)
+            .add(R.id.container, contactDetailFragment)
             .addToBackStack(ContactDetailFragment.TAG).commit()
     }
 
@@ -30,7 +30,7 @@ class MainActivity : AppCompatActivity(), ContactListFragment.OnFragmentInteract
     override fun addNewContact() {
 
         supportFragmentManager.beginTransaction()
-            .replace(R.id.container, ContactDetailFragment.newInstance())
+            .add(R.id.container, ContactDetailFragment.newInstance())
             .addToBackStack(ContactDetailFragment.TAG).commit()
 
     }
