@@ -1,6 +1,7 @@
 package com.swenggco.contactapp.fragments
 
 import android.content.Context
+import android.os.Bundle
 import android.view.View
 import android.widget.DatePicker
 import android.widget.TextView
@@ -8,6 +9,8 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentFactory
 import androidx.fragment.app.testing.FragmentScenario
+import androidx.lifecycle.Lifecycle
+import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.IdlingRegistry
@@ -25,23 +28,41 @@ import androidx.test.filters.LargeTest
 import com.google.android.material.textfield.TextInputLayout
 import com.swenggco.contactapp.AndroidAppTest
 import com.swenggco.contactapp.R
+import com.swenggco.contactapp.RxImmediateSchedulerRule
+import com.swenggco.contactapp.database.ContactDataBase
+import com.swenggco.contactapp.database.DataBaseHelper
 import com.swenggco.contactapp.injections.components.DaggerTestAppComponent
 import com.swenggco.contactapp.injections.modules.AppModule
 import com.swenggco.contactapp.util.EspressoIdlingResource
+import com.swenggco.contactapp.viewmodels.ContactViewModel
 import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.CoreMatchers.not
 import org.hamcrest.Description
 import org.hamcrest.Matcher
 import org.hamcrest.Matchers
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
 import org.junit.runner.RunWith
 
 
 @RunWith(AndroidJUnit4::class)
 @LargeTest
 class ContactDetailFragmentTest {
+
+
+
+    lateinit var dataBaseHelper: DataBaseHelper
+
+
+    lateinit var viewModel: ContactViewModel
+
+
+    // Test rule for making the RxJava to run synchronously in unit test
+    companion object {
+        @ClassRule
+        @JvmField
+        val schedulers = RxImmediateSchedulerRule()
+    }
+
 
     @get:Rule
     val rule = InstantTaskExecutorRule()
@@ -54,11 +75,32 @@ class ContactDetailFragmentTest {
     fun setUp() {
 
         val context = ApplicationProvider.getApplicationContext<Context>() as AndroidAppTest
+
+        dataBaseHelper = DataBaseHelper(
+            Room.inMemoryDatabaseBuilder(
+                context, ContactDataBase::class.java
+            )
+                // allowing main thread queries, just for testing
+                .allowMainThreadQueries()
+                .build()
+        )
+
+        viewModel = ContactViewModel(dataBaseHelper)
+
+
         context.component = DaggerTestAppComponent.builder()
             .appModule(AppModule(context))
             .build()
 
         IdlingRegistry.getInstance().register(EspressoIdlingResource.getIdlingResource())
+
+
+    }
+
+    @Test
+    fun testLastNameEmpty() {
+
+
         //load fragment
         scenario = FragmentScenario.launchInContainer(
             ContactDetailFragment::class.java,
@@ -69,11 +111,6 @@ class ContactDetailFragmentTest {
                     return contactDetailFragment
                 }
             })
-
-    }
-
-    @Test
-    fun testLastNameEmpty() {
 
         //find toolbar
         onView(withId(R.id.toolbar))
@@ -91,6 +128,16 @@ class ContactDetailFragmentTest {
 
     @Test
     fun invalidEmail() {
+
+        scenario = FragmentScenario.launchInContainer(
+            ContactDetailFragment::class.java,
+            null,
+            R.style.AppTheme,
+            object : FragmentFactory() {
+                override fun instantiate(classLoader: ClassLoader, className: String): Fragment {
+                    return contactDetailFragment
+                }
+            })
 
         onView(withId(R.id.lastNameTextInput))
             .perform(setTextInputLayout("Zohaib Akram"))
@@ -117,6 +164,16 @@ class ContactDetailFragmentTest {
 
     @Test
     fun saveContact() {
+
+        scenario = FragmentScenario.launchInContainer(
+            ContactDetailFragment::class.java,
+            null,
+            R.style.AppTheme,
+            object : FragmentFactory() {
+                override fun instantiate(classLoader: ClassLoader, className: String): Fragment {
+                    return contactDetailFragment
+                }
+            })
 
         val context = ApplicationProvider.getApplicationContext<Context>()
 
@@ -184,6 +241,58 @@ class ContactDetailFragmentTest {
 
     }
 
+
+
+    @Test
+    fun showExistingContact(){
+
+
+        //given
+        Assert.assertNotNull(viewModel)
+
+        //when
+        viewModel.addContact(
+            "Swenngco", "Office Contact", "Akram", "Zohaib"
+            , "+3311231", "zohaib@swenggco-software.com", "19-2-1990", "cool",
+            "abc street", "12312", "sialkot", "Pakistan"
+        )
+        //then
+
+        Assert.assertEquals(ContactViewModel.Validation.RESET, viewModel.validation.value)
+
+        Assert.assertEquals(1L, viewModel.insertResult.value)
+
+        viewModel.getContacts()
+
+        val fragmentArgs = Bundle().apply {
+            putParcelable(ContactDetailFragment.ARG_CONTACT, viewModel.contactList.value!![0])
+        }
+
+        //load fragment
+        scenario = FragmentScenario.launchInContainer(
+            ContactDetailFragment::class.java,
+            fragmentArgs,
+            R.style.AppTheme,
+         null)
+
+        //now check Views
+
+        onView(withId(R.id.dateOfBirthTextView))
+            .check(matches(withText("19-2-1990")))
+
+        onView(withId(R.id.titleTextInput))
+            .check(matches(checkTextInputLayout("Office Contact")))
+
+        onView(withId(R.id.lastNameTextInput))
+            .check(matches(checkTextInputLayout("Akram")))
+
+
+        onView(withId(R.id.organizationTextInput))
+            .perform(setTextInputLayout("Swenggco Software"))
+
+    }
+
+
     private fun errorTextInputLayout(errorId: Int): Matcher<View> {
         val context = ApplicationProvider.getApplicationContext<Context>()
 
@@ -200,6 +309,8 @@ class ContactDetailFragmentTest {
 
         }
     }
+
+
 
     private fun setTextInputLayout(text: CharSequence): ViewAction {
 
@@ -224,6 +335,18 @@ class ContactDetailFragmentTest {
             override fun perform(uiController: UiController?, view: View?) {
                 val textInputLayout = view as? TextInputLayout
                 textInputLayout?.editText?.setText(text, TextView.BufferType.EDITABLE)
+            }
+        }
+    }
+
+    private fun checkTextInputLayout(text: String): Matcher<View> {
+
+        return object : BoundedMatcher<View, TextInputLayout>(TextInputLayout::class.java) {
+            override fun describeTo(description: Description?) {
+            }
+
+            override fun matchesSafely(textInputLayout: TextInputLayout?): Boolean {
+                return text == textInputLayout?.editText?.text.toString()
             }
         }
     }

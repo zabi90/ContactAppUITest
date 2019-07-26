@@ -215,7 +215,7 @@ class ContactDetailFragment : BaseFragment(), DatePickerFragment.OnDateSelectedL
 
     private val updateResultObserver: Observer<Int> = Observer {
         if (it > 0) {
-            toast("Update contact successfully")
+            toast(getString(R.string.update_successfully))
             listener?.onContactSaved()
         }
     }

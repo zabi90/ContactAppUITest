@@ -20,7 +20,7 @@ class TestDataModule {
                 context, ContactDataBase::class.java
             )
                 // allowing main thread queries, just for testing
-                //.allowMainThreadQueries()
+                .allowMainThreadQueries()
                 .build()
         )
     }
